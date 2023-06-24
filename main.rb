@@ -43,6 +43,10 @@ class MazeGenerator
   def to_s
     @maze.map { |row| row.map { |cell| cell ? '█' : ' ' }.join }.join("\n")
   end
+
+  def reset
+    @maze = Array.new(@height) { Array.new(@width, true) }
+  end
 end
 
 # Game window
@@ -58,7 +62,7 @@ class MazeWindow < Gosu::Window
     self.caption = 'Maze Generator'
 
     @maze_generator = MazeGenerator.new((WIDTH - CONTROL_BAR_WIDTH) / 10, HEIGHT / 10)
-    @maze = nil
+    generate_maze
 
     @generate_button = Gosu::Image.from_text(self, 'Generate Maze', Gosu.default_font_name, 24)
     @button_x = (WIDTH - CONTROL_BAR_WIDTH + (CONTROL_BAR_WIDTH - BUTTON_WIDTH) / 2)
@@ -74,19 +78,20 @@ class MazeWindow < Gosu::Window
     generate_maze if id == Gosu::MsLeft && mouse_over_button?
   end
 
+  def mouse_over_button?
+    mouse_x > @button_x && mouse_x < @button_x + BUTTON_WIDTH &&
+      mouse_y > @button_y && mouse_y < @button_y + BUTTON_HEIGHT
+  end
+
   def draw
     draw_control_bar
     draw_button
 
-    if @maze
-      maze_x = (WIDTH - CONTROL_BAR_WIDTH) / 10
-      maze_y = HEIGHT / 10
-      @maze.each_with_index do |row, y|
-        row.each_with_index do |cell, x|
-          color = cell ? Gosu::Color::BLACK : Gosu::Color::WHITE
-          draw_quad(x * 10, y * 10, color, (x + 1) * 10, y * 10, color,
-                    (x + 1) * 10, (y + 1) * 10, color, x * 10, (y + 1) * 10, color)
-        end
+    @maze.each_with_index do |row, y|
+      row.each_with_index do |cell, x|
+        color = cell == 'S' ? Gosu::Color::RED : (cell == 'D' ? Gosu::Color::BLUE : (cell ? Gosu::Color::BLACK : Gosu::Color::WHITE))
+        draw_quad(x * 10, y * 10, color, (x + 1) * 10, y * 10, color,
+                  (x + 1) * 10, (y + 1) * 10, color, x * 10, (y + 1) * 10, color)
       end
     end
   end
@@ -103,13 +108,35 @@ class MazeWindow < Gosu::Window
   end
 
   def generate_maze
+    @maze_generator.reset
     @maze_generator.generate
-    @maze = @maze_generator.to_s.split("\n").map { |row| row.chars.map { |c| c == '█' } }
+    @maze = @maze_generator.to_s.split("\n").map { |row| row.chars.map { |c| c == '█' ? false : c } }
+
+    free_spaces = find_free_spaces
+    start_point, destination_point = random_points(free_spaces)
+
+    # Set starting point (red)
+    @maze[start_point[1]][start_point[0]] = 'S'
+
+    # Set destination point (blue)
+    @maze[destination_point[1]][destination_point[0]] = 'D'
   end
 
-  def mouse_over_button?
-    mouse_x > @button_x && mouse_x < @button_x + BUTTON_WIDTH &&
-      mouse_y > @button_y && mouse_y < @button_y + BUTTON_HEIGHT
+  def find_free_spaces
+    free_spaces = []
+    @maze.each_with_index do |row, y|
+      row.each_with_index do |cell, x|
+        free_spaces << [x, y] if cell == false
+      end
+    end
+    free_spaces
+  end
+
+  def random_points(free_spaces)
+    start_point = free_spaces.sample
+    free_spaces.delete(start_point)
+    destination_point = free_spaces.sample
+    [start_point, destination_point]
   end
 end
 
