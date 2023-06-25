@@ -65,8 +65,18 @@ class MazeWindow < Gosu::Window
     generate_maze
 
     @generate_button = Gosu::Image.from_text(self, 'Generate Maze', Gosu.default_font_name, 24)
+    @small_button = Gosu::Image.from_text(self, 'Small', Gosu.default_font_name, 24)
+    @normal_button = Gosu::Image.from_text(self, 'Normal', Gosu.default_font_name, 24)
+    @large_button = Gosu::Image.from_text(self, 'Large', Gosu.default_font_name, 24)
+
     @button_x = (WIDTH - CONTROL_BAR_WIDTH + (CONTROL_BAR_WIDTH - BUTTON_WIDTH) / 2)
     @button_y = (HEIGHT - BUTTON_HEIGHT) / 2
+    @small_button_x = (WIDTH - CONTROL_BAR_WIDTH + (CONTROL_BAR_WIDTH - BUTTON_WIDTH) / 2)
+    @small_button_y = (HEIGHT - BUTTON_HEIGHT) / 2 - 60
+    @normal_button_x = (WIDTH - CONTROL_BAR_WIDTH + (CONTROL_BAR_WIDTH - BUTTON_WIDTH) / 2)
+    @normal_button_y = (HEIGHT - BUTTON_HEIGHT) / 2 - 120
+    @large_button_x = (WIDTH - CONTROL_BAR_WIDTH + (CONTROL_BAR_WIDTH - BUTTON_WIDTH) / 2)
+    @large_button_y = (HEIGHT - BUTTON_HEIGHT) / 2 - 180
   end
 
   def needs_cursor?
@@ -76,6 +86,9 @@ class MazeWindow < Gosu::Window
   def button_down(id)
     close if id == Gosu::KbEscape
     generate_maze if id == Gosu::MsLeft && mouse_over_button?
+    set_maze_size('small') if id == Gosu::MsLeft && mouse_over_small_button?
+    set_maze_size('normal') if id == Gosu::MsLeft && mouse_over_normal_button?
+    set_maze_size('large') if id == Gosu::MsLeft && mouse_over_large_button?
   end
 
   def mouse_over_button?
@@ -83,15 +96,35 @@ class MazeWindow < Gosu::Window
       mouse_y > @button_y && mouse_y < @button_y + BUTTON_HEIGHT
   end
 
+  def mouse_over_small_button?
+    mouse_x > @small_button_x && mouse_x < @small_button_x + BUTTON_WIDTH &&
+      mouse_y > @small_button_y && mouse_y < @small_button_y + BUTTON_HEIGHT
+  end
+
+  def mouse_over_normal_button?
+    mouse_x > @normal_button_x && mouse_x < @normal_button_x + BUTTON_WIDTH &&
+      mouse_y > @normal_button_y && mouse_y < @normal_button_y + BUTTON_HEIGHT
+  end
+
+  def mouse_over_large_button?
+    mouse_x > @large_button_x && mouse_x < @large_button_x + BUTTON_WIDTH &&
+      mouse_y > @large_button_y && mouse_y < @large_button_y + BUTTON_HEIGHT
+  end
+
   def draw
     draw_control_bar
     draw_button
+    draw_small_button
+    draw_normal_button
+    draw_large_button
+
+    block_size = [WIDTH / @maze[0].size, HEIGHT / @maze.size].min
 
     @maze.each_with_index do |row, y|
       row.each_with_index do |cell, x|
         color = cell == 'S' ? Gosu::Color::RED : (cell == 'D' ? Gosu::Color::BLUE : (cell ? Gosu::Color::BLACK : Gosu::Color::WHITE))
-        draw_quad(x * 10, y * 10, color, (x + 1) * 10, y * 10, color,
-                  (x + 1) * 10, (y + 1) * 10, color, x * 10, (y + 1) * 10, color)
+        draw_quad(x * block_size, y * block_size, color, (x + 1) * block_size, y * block_size, color,
+                  (x + 1) * block_size, (y + 1) * block_size, color, x * block_size, (y + 1) * block_size, color)
       end
     end
   end
@@ -107,6 +140,18 @@ class MazeWindow < Gosu::Window
     @generate_button.draw(@button_x, @button_y, 0)
   end
 
+  def draw_small_button
+    @small_button.draw(@small_button_x, @small_button_y, 0)
+  end
+
+  def draw_normal_button
+    @normal_button.draw(@normal_button_x, @normal_button_y, 0)
+  end
+
+  def draw_large_button
+    @large_button.draw(@large_button_x, @large_button_y, 0)
+  end
+
   def generate_maze
     @maze_generator.reset
     @maze_generator.generate
@@ -120,6 +165,19 @@ class MazeWindow < Gosu::Window
 
     # Set destination point (blue)
     @maze[destination_point[1]][destination_point[0]] = 'D'
+  end
+
+  def set_maze_size(size)
+    case size
+    when 'small'
+      @maze_generator = MazeGenerator.new((WIDTH - CONTROL_BAR_WIDTH) / 20, HEIGHT / 20)
+    when 'normal'
+      @maze_generator = MazeGenerator.new((WIDTH - CONTROL_BAR_WIDTH) / 10, HEIGHT / 10)
+    when 'large'
+      @maze_generator = MazeGenerator.new((WIDTH - CONTROL_BAR_WIDTH) / 5, HEIGHT / 5)
+    end
+
+    generate_maze
   end
 
   def find_free_spaces
